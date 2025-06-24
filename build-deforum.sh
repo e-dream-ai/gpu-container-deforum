@@ -24,7 +24,7 @@ fi
 DOCKER_BUILDKIT=1 docker build \
   --build-arg DEFORUM_BRANCH="${DEFORUM_BRANCH}" \
   -t "${IMAGE_NAME}" \
-  -f Dockerfile-build .
+  -f Dockerfile-dev-build .
 
 # Step 2: Run container with GPU to trigger deforum model downloads
 echo ""
@@ -37,7 +37,7 @@ container_id=$(docker run -d \
   -v "$(pwd)":/input \
   -e ROOT_PATH=/deforum_storage \
   ${IMAGE_NAME} \
-  deforum run --file /input/${SETTINGS_FILE})
+  deforum runsingle --file /input/${SETTINGS_FILE})
 
 docker logs -f $container_id
 docker wait $container_id > /tmp/exit_code
