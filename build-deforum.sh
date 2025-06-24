@@ -16,8 +16,21 @@ available_kb=$(df --output=avail "$mount_point" | tail -1)
 available_gb=$((available_kb / 1024 / 1024))
 threshold_gb=50
 if (( available_gb < threshold_gb )); then
-  echo "Error: Less than ${threshold_gb}GB available. Available: ${available_gb}GB"
-  exit 1
+  echo "⚠️  Warning: Less than ${threshold_gb}GB available. Currently: ${available_gb}GB"
+  echo "Attempting to clean up old Docker resources..."
+
+  docker system prune -a -f --volumes
+
+  # Recheck space
+  available_kb=$(df --output=avail "$mount_point" | tail -1)
+  available_gb=$((available_kb / 1024 / 1024))
+
+  if (( available_gb < threshold_gb )); then
+    echo "❌ Error: Still not enough space after cleanup. Available: ${available_gb}GB"
+    exit 1
+  else
+    echo "✅ Space reclaimed. Continuing build..."
+  fi
 fi
 
 # Step 1: Build base image without GPU steps
