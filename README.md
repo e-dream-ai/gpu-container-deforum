@@ -1,55 +1,109 @@
+# SD XL Deforum Docker Image
 
-### 📁 Repo Structure (example)
-
-```
-deforum-comfyui-deploy/
-├── Dockerfile
-├── download_models.sh
-├── upload_to_dockerhub.sh
-├── requirements.txt
-├── README.md
-└── configs/
-    └── comfyui_config.json
-```
-
-
-# Deforum + ComfyUI Docker Deployment
-
-This repository packages [deforum-studio](https://github.com/XmYx/deforum-studio) and [ComfyUI](https://github.com/comfyanonymous/ComfyUI) into a single Docker image for scalable deployment with all necessary models preloaded.
+This repository provides a Docker-based setup for **SD XL Deforum** featuring GPU-accelerated inference and a RunPod deployment handler.
 
 ## Features
 
-- ⚡ One-click deployment with CUDA support
-- 📦 Bundled model downloads for fast scaling
-- 🧠 Includes Flux and other required models
-- 🐳 DockerHub upload support
+* **Stable Diffusion XL Deforum**: Animation toolkit with advanced Deforum scripting.
+* **Automatic Model + Deforum CLI Download**: On first GPU run, the Deforum code and required model checkpoints are fetched automatically.
+* **Docker Image**: Based on `nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04` for seamless GPU support.
+* **OpenCV Headless Enforcement**: Ensures only the headless OpenCV wheel is used to avoid GUI dependencies.
+* **RunPod Handler**: Serverless function for hosting on RunPod’s serverless framework, with optional S3 upload support.
 
-## Usage
+## Prerequisites
 
-### Build and push Docker image
+* Docker Engine with GPU support (NVIDIA Docker).
+* NVIDIA drivers and CUDA Toolkit on host.
+* Python 3.10+ for local testing (optional).
+* RunPod account for serverless deployment.
+
+## Repository Structure
+
+```text
+├── Dockerfile-build                  # Base Docker build for Deforum
+├── entrypoint.sh                     # Runtime entrypoint to enforce OpenCV headless
+├── build-deforum-deploy.sh           # Build and deploy script
+├── comprehensive-requirements.txt    # Pinned Python dependencies
+└── README.md                         # This document
+```
+
+## Building the Docker Image
+
+1. **Build with GPU support**:
+
+   ```bash
+   chmod +x build-deforum-deploy.sh
+   ./build-deforum-deploy.sh
+   ```
+
+   * `<deforum-branch>` defaults to `dev`.
+   * `[settings-file]` defaults to `test-settings.txt`.
+
+2. **Result**:
+
+   * Docker image tagged as `deforum-studio/animation-toolkit:<timestamp>-<branch>`.
+   * Optional `comprehensive-requirements.txt` generated.
+
+## Local Usage
+
+Run a container manually:
 
 ```bash
-./upload_to_dockerhub.sh
-````
-
-### Running the container
-
-```bash
-Example: docker run --gpus all -it -p 3000:3000 your-org/deforum-comfyui:latest
+docker run --gpus all -v $(pwd):/input \
+  -e ROOT_PATH=/deforum_storage \
+  deforum-studio/animation-toolkit:<tag> \
+  deforum runsingle --file /input/your-settings.json
 ```
 
-## Model Directory Structure
+Output will be available in `/deforum_storage/output/video` and copied to `./output` by the build script.
 
-```
-/workspace/models/
-├── deforum/
-├── flux/
-└── comfyui/
-```
+## Deploying on RunPod
 
-Ensure `download_models.sh` uses appropriate links for your use case.
+1. **Install dependencies**:
 
-```
-TODO's:
-- The exact model download URLs (or Hugging Face repo names),
-- `docker-compose.yml.
+   ```bash
+   pip install runpod
+   ```
+
+2. **Prepare handler**:
+
+   * Ensure `runpod_handler.py` is present in project root.
+
+3. **Configure RunPod**:
+
+   ```bash
+   export RUNPOD_API_KEY=YOUR_API_KEY_HERE
+   ```
+
+   * (Optional) Configure S3 bucket credentials in `runpod_handler.py`.
+
+4. **Deploy**:
+
+   ```bash
+   runpod serverless deploy \
+     --name sd-xl-deforum \
+     --handler runpod_handler.handler \
+     --image deforum-studio/animation-toolkit:<tag> \
+     --memory 16384 \
+     --gpu-count 1 \
+     --region <your-region>
+   ```
+
+5. **Invoke**:
+
+   ```bash
+   runpod serverless invoke \
+     --name sd-xl-deforum \
+     --input '{"input": {"prompt": "A cinematic landscape", "steps": 30}}'
+   ```
+
+The response will include a `video` URL to your generated MP4.
+
+## Advanced Configuration
+
+* **Settings File**: Pass `settings_file` in payload to override JSON parameters.
+* **S3 Upload**: In `handler.py`, uncomment and fill `bucket_creds` and `bucket_name`.
+
+---
+
+> Happy animating with SD XL Deforum on Docker and RunPod!

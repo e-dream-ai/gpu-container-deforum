@@ -14,8 +14,38 @@ WORKDIR /workdir/deforum
 
 RUN pip install -e .[dev]
 
+# Uninstall and reinstall OpenCV packages as needed
+RUN pip uninstall -y opencv-python opencv-python-headless
+RUN pip install opencv-python-headless --force-reinstall
+
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /workdir/deforum/src/ComfyUI
 WORKDIR /workdir/deforum/src/ComfyUI
 RUN git checkout daa92a8ff4d3e75a3b17bb1a6b6c508b27264ff5
 
 WORKDIR /workdir/deforum
+
+
+# ——————————————————————————————————————————
+# Conditionally install the Protovision model
+# ——————————————————————————————————————————
+
+# 1) Copy your entire models folder into the image (won’t fail if it’s empty)
+COPY ./models /tmp/models
+
+# 2) If the specific .safetensors file exists, move it into ComfyUI’s checkpoints
+RUN if [ -f /tmp/models/protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors ]; then \
+      mkdir -p /deforum_storage/models && \
+      cp /tmp/models/protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors \
+         /deforum_storage/models/protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors; \
+    fi
+
+# (Optional) clean up the temp copy
+RUN rm -rf /tmp/models
+
+# Copy and install the entrypoint
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Switch to our entrypoint + keep deforum CLI as the default cmd
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["deforum", "runsingle", "--file", "/input/$SETTINGS_FILE"]

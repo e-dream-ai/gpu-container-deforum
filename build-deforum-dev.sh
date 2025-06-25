@@ -62,6 +62,13 @@ if [ "$exit_code" != "0" ]; then
     exit $exit_code
 fi
 
+# Extract output video before cleaning up the container
+output_path_in_container="/deforum_storage/output/video"
+output_path_on_host="./output"
+
+mkdir -p "${output_path_on_host}"
+docker cp "${container_id}:${output_path_in_container}" "${output_path_on_host}"
+
 # Commit the initialized container (with models, configs, etc.)
 docker commit $container_id "${IMAGE_NAME}"
 docker rm $container_id

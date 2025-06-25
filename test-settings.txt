@@ -33,12 +33,12 @@
     "reroll_patience": 10.0,
     "motion_preview_mode": false,
     "prompts": {
-        "0": ""
+        "0": "emma watson as an avocade chair"
     },
     "animation_prompts_positive": "",
     "animation_prompts_negative": "",
     "animation_mode": "3D",
-    "max_frames": 181,
+    "max_frames": 16,
     "border": "replicate",
     "angle": "0: (0)",
     "zoom": "0: (0)",
