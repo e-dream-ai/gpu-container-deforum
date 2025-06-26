@@ -7,9 +7,9 @@ SETTINGS_FILE=${2:-test-settings.txt}  # Default settings file in current dir
 
 timestamp=$(date +%Y%m%d%H%M%S)
 version="${timestamp}-${DEFORUM_BRANCH}"
-IMAGE_NAME="mixy89/ellaborate-chimpanzee-ops:${version}"
+IMAGE_NAME="edreamai/runpod-deforum:general"
 
-HUB_REPO="mixy89/ellaborate-chimpanzee-ops"
+HUB_REPO="edreamai/runpod-deforum"
 HUB_IMAGE="${HUB_REPO}:${version}"
 
 # Check Docker disk space
@@ -79,8 +79,6 @@ docker cp "${container_id}:${output_path_in_container}" "${output_path_on_host}"
 docker commit $container_id "${IMAGE_NAME}"
 docker rm $container_id
 
-docker tag "${IMAGE_NAME}" "${HUB_IMAGE}"
-
 
 echo ""
 echo "**************************************************"
@@ -91,8 +89,8 @@ echo "**************************************************"
 
 echo ""
 echo "**************************************************"
-echo "Docker image '${HUB_IMAGE}' is ready with all dependencies and models bundled."
+echo "Docker image '${IMAGE_NAME}' is ready with all dependencies and models bundled."
 echo "Pushing to Docker Hub..."
-docker push "${HUB_IMAGE}"
+docker push "${IMAGE_NAME}"
 echo "✅ Push complete."
 echo "**************************************************"
