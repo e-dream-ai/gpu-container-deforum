@@ -7,7 +7,10 @@ SETTINGS_FILE=${2:-test-settings.txt}  # Default settings file in current dir
 
 timestamp=$(date +%Y%m%d%H%M%S)
 version="${timestamp}-${DEFORUM_BRANCH}"
-IMAGE_NAME="deforum-studio/animation-toolkit:${version}"
+IMAGE_NAME="mixy89/ellaborate-chimpanzee-ops:${version}"
+
+HUB_REPO="mixy89/ellaborate-chimpanzee-ops"
+HUB_IMAGE="${HUB_REPO}:${version}"
 
 # Check Docker disk space
 docker_root=$(docker info --format '{{.DockerRootDir}}')
@@ -50,7 +53,10 @@ container_id=$(docker run -d \
   -v "$(pwd)":/input \
   -e ROOT_PATH=/deforum_storage \
   ${IMAGE_NAME} \
-  deforum runsingle --file /input/${SETTINGS_FILE})
+  bash -c "\
+    python3 src/handler.py   --test_input '{"input": {"settings": {"prompts":{"0":"Gargatuantan sacred castle"}}}}'
+  ")
+
 
 docker logs -f $container_id
 docker wait $container_id > /tmp/exit_code
@@ -73,12 +79,20 @@ docker cp "${container_id}:${output_path_in_container}" "${output_path_on_host}"
 docker commit $container_id "${IMAGE_NAME}"
 docker rm $container_id
 
-# Optional: lock Python environment to a requirements file
-docker run --rm "${IMAGE_NAME}" pip freeze > comprehensive-requirements.txt
+docker tag "${IMAGE_NAME}" "${HUB_IMAGE}"
+
 
 echo ""
 echo "**************************************************"
 echo "Docker image '${IMAGE_NAME}' is ready with all dependencies and models bundled."
 echo "You can now push it manually with:"
 echo "  docker push ${IMAGE_NAME}"
+echo "**************************************************"
+
+echo ""
+echo "**************************************************"
+echo "Docker image '${HUB_IMAGE}' is ready with all dependencies and models bundled."
+echo "Pushing to Docker Hub..."
+docker push "${HUB_IMAGE}"
+echo "✅ Push complete."
 echo "**************************************************"

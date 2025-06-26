@@ -1,26 +1,71 @@
-from BackendWorker import BackendWorker
-from threading import Event
+import os
+import sys
+import json
+import math
+import time
+import subprocess
+import tempfile
+from pathlib import Path
+from deforum.shared_storage import models
+from deforum import DeforumAnimationPipeline
 
 class Predictor:
     def __init__(self):
-        self.video_path = None
+        self.pipe = None
 
     def setup(self):
-        pass  # If needed for init logic
+        # Load or reuse the Deforum pipeline
+        model_id = os.getenv("DEFORUM_MODEL_ID", "125703")
+        if 'deforum_pipe' not in models:
+            models['deforum_pipe'] = DeforumAnimationPipeline.from_civitai(model_id=model_id)
+        self.pipe = models['deforum_pipe']
 
-    def predict(self, **kwargs):
-        finished = Event()
+    def predict(self, settings_file: str) -> str:
+        """
+        Run Deforum with the given settings file and return the generated video path.
+        """
+        result = self.run_backend(settings_file)
+        video_path = result.get("video_path")
+        if not video_path:
+            raise RuntimeError(f"Deforum failed, no video_path in result: {result}")
+        return video_path
 
-        def handle_finished(result):
-            self.video_path = result.get("video_path")
-            finished.set()
+    def run_backend(self, settings_file: str) -> dict:
+        # Verify settings file
+        if not os.path.exists(settings_file):
+            raise FileNotFoundError(f"Settings file '{settings_file}' not found.")
 
-        def handle_image(data):
-            pass  # Optional hook
+        # Load JSON settings
+        with open(settings_file, 'r') as f:
+            params = json.load(f)
 
-        worker = BackendWorker(params=kwargs, on_image_generated=handle_image, on_finished=handle_finished)
-        worker.start()
-        worker.join()
-        finished.wait()
+        # Attach settings_file path
+        params["settings_file"] = settings_file
+        # Ensure generator optimization flag
+        self.pipe.generator.optimize = params.get('optimize', True)
 
-        return self.video_path
+        # Parse prompts into dict if needed
+        prom = params.get("prompts", {})
+        if isinstance(prom, str):
+            lines = prom.strip().split("")
+            keys = params.get("keyframes", "0").strip().split("")
+            params["animation_prompts"] = dict(zip(keys, lines))
+        else:
+            params["animation_prompts"] = prom
+
+        # Handle timestring/resume
+        ts = time.strftime('%Y%m%d%H%M%S')
+        params["timestring"] = params.get("resume_from_timestring") and params.get("resume_timestring") or ts
+
+        # Run the pipeline
+        animation = self.pipe(callback=None, **params)
+
+        # Collect result
+        result = {
+            "status": "Ready",
+            "timestring": animation.timestring,
+            "resume_path": animation.outdir,
+            "resume_from": getattr(animation, 'max_frames', None),
+            "video_path": getattr(animation, 'video_path', None)
+        }
+        return result
