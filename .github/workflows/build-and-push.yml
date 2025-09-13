@@ -1,67 +1,35 @@
-name: Build and Push Docker Image
+name: Build, Push and Deploy to RunPod
 
 on:
   push:
     branches:
       - main
-      - dev
   workflow_dispatch:
     inputs:
       deforum_branch:
         description: "Deforum branch to build"
         required: false
-        default: "dev"
+        default: "main"
         type: string
       docker_tag:
-        description: "Docker tag suffix (optional)"
+        description: "Optional Docker tag suffix"
         required: false
         default: ""
         type: string
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: vule230/deforum-studio
+  IMAGE_NAME: vule230/deforum-studio # 👈 personal namespace/repo
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # This might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-          # All of these default to true, but feel free to set to
-          # "false" if necessary for your workflow
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-
-      - name: Clear additional space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/local/.ghcup
-          sudo rm -rf /usr/local/share/powershell
-          sudo rm -rf /usr/local/share/chromium
-          sudo rm -rf /usr/local/lib/node_modules
-          sudo apt-get autoremove -y
-          sudo apt-get autoclean -y
-          df -h
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        id: buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
@@ -74,60 +42,41 @@ jobs:
       - name: Generate image metadata
         id: meta
         run: |
-          # Set deforum branch (from input or default to 'dev')
-          DEFORUM_BRANCH="${{ github.event.inputs.deforum_branch || 'dev' }}"
-
-          # Generate timestamp-based version
+          DEFORUM_BRANCH="${{ github.event.inputs.deforum_branch || 'main' }}"
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
           VERSION="${TIMESTAMP}-${DEFORUM_BRANCH}"
 
-          # Handle custom tag suffix
           TAG_SUFFIX="${{ github.event.inputs.docker_tag }}"
           if [ -n "$TAG_SUFFIX" ]; then
             VERSION="${VERSION}-${TAG_SUFFIX}"
           fi
 
-          # Set outputs
           echo "deforum_branch=${DEFORUM_BRANCH}" >> $GITHUB_OUTPUT
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "image_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" >> $GITHUB_OUTPUT
           echo "latest_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
 
-      - name: Build Docker image
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile-build
           build-args: |
             DEFORUM_BRANCH=${{ steps.meta.outputs.deforum_branch }}
+          push: true
           tags: |
             ${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.latest_tag }}
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          # Optimize for space usage
           platforms: linux/amd64
-          outputs: type=image,push=true
-          # Use BuildKit's garbage collection
-          builder: ${{ steps.buildx.outputs.name }}
 
-      - name: Clean up Docker resources
-        if: always()
+      - name: Deploy New Release to RunPod
         run: |
-          docker system prune -af --volumes
-          df -h
+          IMAGE_TAG=${{ steps.meta.outputs.latest_tag }}
+          echo "🚀 Deploying $IMAGE_TAG to RunPod..."
 
-      - name: Generate build summary
-        run: |
-          echo "## 🐳 Docker Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image:** \`${{ steps.meta.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Latest:** \`${{ steps.meta.outputs.latest_tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Deforum Branch:** \`${{ steps.meta.outputs.deforum_branch }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Build Time:** \`$(date -u)\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Pull Command" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "docker pull ${{ steps.meta.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          curl -X POST https://api.runpod.io/graphql \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.RUNPOD_API_KEY }}" \
+            -d '{
+              "query": "mutation { deploymentUpdate(input: { id: \"'${{ secrets.RUNPOD_ENDPOINT_ID }}'\", imageName: \"'${IMAGE_TAG}'\" }) { id imageName status } }"
+            }'
