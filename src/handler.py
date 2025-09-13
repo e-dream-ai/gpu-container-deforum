@@ -52,17 +52,18 @@ def handler(event):
     video_local = generate_video.predict(settings_file=sf_path)
     os.remove(sf_path)
 
-    # 5) configure boto3 S3 client
-    bucket_name  = os.environ["BUCKET_NAME"]
-    endpoint_url = os.environ["BUCKET_ENDPOINT_URL"]
-    aws_key      = os.environ["BUCKET_ACCESS_KEY_ID"]
-    aws_secret   = os.environ["BUCKET_SECRET_ACCESS_KEY"]
+    # 5) configure boto3 client for Cloudflare R2
+    bucket_name  = os.environ["R2_BUCKET_NAME"]
+    endpoint_url = os.environ["R2_ENDPOINT_URL"]  # https://<account-id>.r2.cloudflarestorage.com
+    r2_key       = os.environ["R2_ACCESS_KEY_ID"]
+    r2_secret    = os.environ["R2_SECRET_ACCESS_KEY"]
 
     s3 = boto3.client(
         "s3",
         endpoint_url=endpoint_url,
-        aws_access_key_id=aws_key,
-        aws_secret_access_key=aws_secret,
+        aws_access_key_id=r2_key,
+        aws_secret_access_key=r2_secret,
+        region_name="auto",  # R2 uses 'auto' as region
         config=boto3.session.Config(s3={"addressing_style": "path"})
     )
 
@@ -73,7 +74,11 @@ def handler(event):
     # 7) cleanup local
     os.remove(video_local)
 
-    # 8) construct public URL (path-style)
+    # 8) construct public URL for Cloudflare R2
+    # Option 1: Use R2 public URL if bucket has public access
+    # video_url = f"https://{bucket_name}.{os.environ.get('R2_PUBLIC_DOMAIN', 'r2.dev')}/{s3_key}"
+    
+    # Option 2: Use R2 API endpoint (requires authentication for access)
     video_url = f"{endpoint_url}/{bucket_name}/{s3_key}"
 
     return {"video": video_url}
