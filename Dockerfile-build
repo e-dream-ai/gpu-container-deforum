@@ -15,6 +15,9 @@ WORKDIR /workdir/deforum
 
 RUN pip install -e .[dev]
 
+# Install additional dependencies for RunPod handler
+RUN pip install runpod boto3 requests
+
 # Uninstall and reinstall OpenCV packages as needed
 RUN pip uninstall -y opencv-python opencv-python-headless
 RUN pip install opencv-python-headless --force-reinstall
@@ -41,6 +44,9 @@ RUN if [ -f /tmp/models/protovisionXLHighFidelity3D_releaseV660Bakedvae.safetens
 
 # (Optional) clean up the temp copy
 RUN rm -rf /tmp/models
+
+# Copy our local src directory with handler.py and related files
+COPY src/ /workdir/deforum/src/
 
 # Copy and install the entrypoint
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

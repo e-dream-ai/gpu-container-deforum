@@ -5,17 +5,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      deforum_branch:
-        description: "Deforum branch to build"
-        required: false
-        default: "main"
-        type: string
-      docker_tag:
-        description: "Optional Docker tag suffix"
-        required: false
-        default: ""
-        type: string
 
 env:
   REGISTRY: docker.io
@@ -49,32 +38,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Generate image metadata
-        id: meta
-        run: |
-          DEFORUM_BRANCH="${{ github.event.inputs.deforum_branch || 'main' }}"
-          TIMESTAMP=$(date +%Y%m%d%H%M%S)
-          VERSION="${TIMESTAMP}-${DEFORUM_BRANCH}"
-
-          TAG_SUFFIX="${{ github.event.inputs.docker_tag }}"
-          if [ -n "$TAG_SUFFIX" ]; then
-            VERSION="${VERSION}-${TAG_SUFFIX}"
-          fi
-
-          echo "deforum_branch=${DEFORUM_BRANCH}" >> $GITHUB_OUTPUT
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "image_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}" >> $GITHUB_OUTPUT
-          echo "latest_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
-
-      - name: Build and Push Docker Image
+      - name: Build and Push Docker Image (latest only)
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile-build
-          build-args: |
-            DEFORUM_BRANCH=${{ steps.meta.outputs.deforum_branch }}
           push: true
-          tags: |
-            ${{ steps.meta.outputs.image_tag }}
-            ${{ steps.meta.outputs.latest_tag }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           platforms: linux/amd64
