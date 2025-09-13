@@ -1,4 +1,4 @@
-name: Build, Push and Deploy to RunPod
+name: Build and Push Docker Image
 
 on:
   push:
@@ -19,14 +19,13 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: vule230/deforum-studio
+  IMAGE_NAME: edreamai/deforum-studio
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # Free up disk space before we do anything heavy
       - name: Free Disk Space
         uses: jlumbroso/free-disk-space@main
         with:
@@ -79,15 +78,3 @@ jobs:
             ${{ steps.meta.outputs.image_tag }}
             ${{ steps.meta.outputs.latest_tag }}
           platforms: linux/amd64
-
-      - name: Deploy New Release to RunPod
-        run: |
-          IMAGE_TAG=${{ steps.meta.outputs.latest_tag }}
-          echo "🚀 Deploying $IMAGE_TAG to RunPod..."
-
-          curl -X POST https://api.runpod.io/graphql \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${{ secrets.RUNPOD_API_KEY }}" \
-            -d '{
-              "query": "mutation { deploymentUpdate(input: { id: \"'${{ secrets.RUNPOD_ENDPOINT_ID }}'\", imageName: \"'${IMAGE_TAG}'\" }) { id imageName status } }"
-            }'
