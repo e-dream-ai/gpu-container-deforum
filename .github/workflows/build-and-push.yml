@@ -27,10 +27,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # This might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
+          # All of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+
+      - name: Clear additional space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/local/share/chromium
+          sudo rm -rf /usr/local/lib/node_modules
+          sudo apt-get autoremove -y
+          sudo apt-get autoclean -y
+          df -h
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
@@ -75,6 +106,17 @@ jobs:
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Optimize for space usage
+          platforms: linux/amd64
+          outputs: type=image,push=true
+          # Use BuildKit's garbage collection
+          builder: ${{ steps.buildx.outputs.name }}
+
+      - name: Clean up Docker resources
+        if: always()
+        run: |
+          docker system prune -af --volumes
+          df -h
 
       - name: Generate build summary
         run: |
