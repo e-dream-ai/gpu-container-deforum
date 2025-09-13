@@ -14,10 +14,21 @@ class Predictor:
         self.pipe = None
 
     def setup(self):
+        # Ensure cache directories exist
+        cache_dir = os.getenv("HF_HOME", "/deforum_storage/huggingface")
+        os.makedirs(cache_dir, exist_ok=True)
+        os.makedirs(os.path.join(cache_dir, "transformers"), exist_ok=True)
+        os.makedirs(os.path.join(cache_dir, "hub"), exist_ok=True)
+        
         # Load or reuse the Deforum pipeline
         model_id = os.getenv("DEFORUM_MODEL_ID", "125703")
         if 'deforum_pipe' not in models:
-            models['deforum_pipe'] = DeforumAnimationPipeline.from_civitai(model_id=model_id)
+            try:
+                models['deforum_pipe'] = DeforumAnimationPipeline.from_civitai(model_id=model_id)
+            except Exception as e:
+                print(f"Error loading model from CivitAI: {e}")
+                # Fallback: try to load a default model or handle gracefully
+                raise RuntimeError(f"Failed to load Deforum model {model_id}: {e}")
         self.pipe = models['deforum_pipe']
 
     def predict(self, settings_file: str) -> str:

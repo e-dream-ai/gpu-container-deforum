@@ -28,6 +28,19 @@ RUN git checkout daa92a8ff4d3e75a3b17bb1a6b6c508b27264ff5
 
 WORKDIR /workdir/deforum
 
+# Set up cache directories and environment variables for HuggingFace and model storage
+ENV HF_HOME=/deforum_storage/huggingface
+ENV TRANSFORMERS_CACHE=/deforum_storage/huggingface/transformers
+ENV HF_DATASETS_CACHE=/deforum_storage/huggingface/datasets
+ENV HUGGINGFACE_HUB_CACHE=/deforum_storage/huggingface/hub
+ENV ROOT_PATH=/deforum_storage
+
+# Create necessary cache and model directories
+RUN mkdir -p /deforum_storage/huggingface/transformers \
+    /deforum_storage/huggingface/datasets \
+    /deforum_storage/huggingface/hub \
+    /deforum_storage/models
+
 # ——————————————————————————————————————————
 # Conditionally install the Protovision model
 # ——————————————————————————————————————————
