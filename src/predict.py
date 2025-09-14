@@ -15,7 +15,7 @@ class Predictor:
     def __init__(self):
         self.pipe = None
 
-def setup(self):
+    def setup(self):
         # Report disk space
         total, used, free = shutil.disk_usage("/")
         print(
