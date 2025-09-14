@@ -53,7 +53,7 @@ class Predictor:
         if "deforum_pipe" not in models:
             try:
                 if selected_path:
-                    models["deforum_pipe"] = DeforumAnimationPipeline.from_pretrained(selected_path)
+                    models["deforum_pipe"] = DeforumAnimationPipeline.from_file(model_path=selected_path)
                     print(f"[Init] Successfully loaded from local path: {selected_path}")
                 else:
                     print(f"[Init] No local model found, downloading from CivitAI with id={model_id}...")
