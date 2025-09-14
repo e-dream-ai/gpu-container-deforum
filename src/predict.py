@@ -15,7 +15,7 @@ class Predictor:
     def __init__(self):
         self.pipe = None
 
-    def setup(self):
+def setup(self):
         # Report disk space
         total, used, free = shutil.disk_usage("/")
         print(
@@ -29,24 +29,44 @@ class Predictor:
         for var in cache_vars:
             print(f"[Init] {var} = {os.getenv(var)}")
 
-        # Load or reuse the Deforum pipeline
+        # Deforum model ID (CivitAI fallback)
         model_id = os.getenv("DEFORUM_MODEL_ID", "125703")
-        print(f"[Init] Loading Deforum model_id={model_id} from CivitAI...")
 
+        # Known model file name
+        model_filename = "protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors"
+
+        # Possible paths
+        pv_path = f"/workspace/{model_filename}"           # Persistent Volume
+        baked_path = f"/deforum_storage/models/{model_filename}"  # baked into image
+        selected_path = None
+
+        print(f"[Init] Checking for local model file...")
+
+        if os.path.exists(pv_path):
+            selected_path = pv_path
+            print(f"[Init] Found model in PV: {pv_path}")
+        elif os.path.exists(baked_path):
+            selected_path = baked_path
+            print(f"[Init] Found model baked in image: {baked_path}")
+
+        # Initialize pipeline
         if "deforum_pipe" not in models:
             try:
-                models["deforum_pipe"] = DeforumAnimationPipeline.from_civitai(
-                    model_id=model_id
-                )
-                print(f"[Init] Successfully loaded Deforum model {model_id}")
+                if selected_path:
+                    models["deforum_pipe"] = DeforumAnimationPipeline.from_pretrained(selected_path)
+                    print(f"[Init] Successfully loaded from local path: {selected_path}")
+                else:
+                    print(f"[Init] No local model found, downloading from CivitAI with id={model_id}...")
+                    models["deforum_pipe"] = DeforumAnimationPipeline.from_civitai(model_id=model_id)
+                    print(f"[Init] Successfully downloaded and loaded model {model_id} from CivitAI")
             except Exception as e:
-                print(f"[Init][ERROR] Failed to load model {model_id}")
+                print(f"[Init][ERROR] Model load failed!")
                 traceback.print_exc()
                 raise RuntimeError(
-                    f"Deforum model download/setup failed → {type(e).__name__}: {e}"
+                    f"Deforum model setup failed → {type(e).__name__}: {e}"
                 )
         else:
-            print(f"[Init] Re-using existing loaded pipeline for {model_id}")
+            print(f"[Init] Re-using existing loaded pipeline.")
 
         self.pipe = models["deforum_pipe"]
 
