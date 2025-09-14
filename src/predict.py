@@ -36,7 +36,7 @@ class Predictor:
         model_filename = "protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors"
 
         # Possible paths
-        pv_path = f"/workspace/{model_filename}"           # Persistent Volume
+        pv_path = f"/runpod-volume/{model_filename}"           # Persistent Volume
         baked_path = f"/deforum_storage/models/{model_filename}"  # baked into image
         selected_path = None
 
