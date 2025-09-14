@@ -15,6 +15,9 @@ WORKDIR /workdir/deforum
 
 RUN pip install -e .[dev]
 
+# Install RunPod SDK & utils
+RUN pip install runpod boto3 requests
+
 # Uninstall and reinstall OpenCV packages as needed
 RUN pip uninstall -y opencv-python opencv-python-headless
 RUN pip install opencv-python-headless --force-reinstall
