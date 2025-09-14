@@ -5,6 +5,8 @@ import math
 import time
 import subprocess
 import tempfile
+import shutil
+import traceback
 from pathlib import Path
 from deforum.shared_storage import models
 from deforum import DeforumAnimationPipeline
@@ -14,58 +16,42 @@ class Predictor:
         self.pipe = None
 
     def setup(self):
-        # Ensure cache directories exist
-        cache_dir = os.getenv("HF_HOME", "/deforum_storage/huggingface")
-        if not cache_dir:
-            cache_dir = "/deforum_storage/huggingface"
-        
-        os.makedirs(cache_dir, exist_ok=True)
-        os.makedirs(os.path.join(cache_dir, "transformers"), exist_ok=True)
-        os.makedirs(os.path.join(cache_dir, "datasets"), exist_ok=True)
-        os.makedirs(os.path.join(cache_dir, "hub"), exist_ok=True)
-        
-        os.environ["HF_HOME"] = cache_dir
-        os.environ["TRANSFORMERS_CACHE"] = os.path.join(cache_dir, "transformers")
-        os.environ["HF_DATASETS_CACHE"] = os.path.join(cache_dir, "datasets")
-        os.environ["HF_HUB_CACHE"] = os.path.join(cache_dir, "hub")
-        os.environ["HUGGINGFACE_HUB_CACHE"] = os.path.join(cache_dir, "hub")
-        
+        # Report disk space
+        total, used, free = shutil.disk_usage("/")
+        print(
+            f"[Init] Disk space total={total//(1024**3)}GB, "
+            f"used={used//(1024**3)}GB, free={free//(1024**3)}GB"
+        )
+
+        # Report env vars
+        cache_vars = ["HF_HOME", "HF_HUB_CACHE", "TRANSFORMERS_CACHE",
+                      "HF_DATASETS_CACHE", "DEFORUM_MODEL_ID"]
+        for var in cache_vars:
+            print(f"[Init] {var} = {os.getenv(var)}")
+
         # Load or reuse the Deforum pipeline
         model_id = os.getenv("DEFORUM_MODEL_ID", "125703")
-        if 'deforum_pipe' not in models:
+        print(f"[Init] Loading Deforum model_id={model_id} from CivitAI...")
+
+        if "deforum_pipe" not in models:
             try:
-                print(f"Loading Deforum model {model_id} from CivitAI...")
-                print(f"Using cache directory: {cache_dir}")
-                print(f"Environment variables:")
-                print(f"  HF_HOME: {os.environ.get('HF_HOME')}")
-                print(f"  TRANSFORMERS_CACHE: {os.environ.get('TRANSFORMERS_CACHE')}")
-                print(f"  HF_HUB_CACHE: {os.environ.get('HF_HUB_CACHE')}")
-                print(f"  HUGGINGFACE_HUB_CACHE: {os.environ.get('HUGGINGFACE_HUB_CACHE')}")
-                models['deforum_pipe'] = DeforumAnimationPipeline.from_civitai(model_id=model_id)
-                print(f"Successfully loaded Deforum model {model_id}")
-            except TypeError as e:
-                if "join() argument must be str" in str(e):
-                    print(f"Cache directory error: {e}")
-                    print(f"HF_HOME environment variable: {os.getenv('HF_HOME')}")
-                    print(f"Current cache_dir value: {cache_dir}")
-                    raise RuntimeError(f"Cache directory configuration error for model {model_id}. "
-                                     f"Please ensure HF_HOME is properly set. Error: {e}")
-                else:
-                    raise RuntimeError(f"Failed to load Deforum model {model_id}: {e}")
+                models["deforum_pipe"] = DeforumAnimationPipeline.from_civitai(
+                    model_id=model_id
+                )
+                print(f"[Init] Successfully loaded Deforum model {model_id}")
             except Exception as e:
-                print(f"Error loading model from CivitAI: {e}")
-                print(f"Model ID: {model_id}")
-                print(f"Cache directory: {cache_dir}")
-                # Fallback: try to load a default model or handle gracefully
-                raise RuntimeError(f"Failed to load Deforum model {model_id}: {e}")
+                print(f"[Init][ERROR] Failed to load model {model_id}")
+                traceback.print_exc()
+                raise RuntimeError(
+                    f"Deforum model download/setup failed → {type(e).__name__}: {e}"
+                )
         else:
-            print(f"Reusing existing Deforum pipeline for model {model_id}")
-        self.pipe = models['deforum_pipe']
+            print(f"[Init] Re-using existing loaded pipeline for {model_id}")
+
+        self.pipe = models["deforum_pipe"]
 
     def predict(self, settings_file: str) -> str:
-        """
-        Run Deforum with the given settings file and return the generated video path.
-        """
+        """Run Deforum with the given settings file and return the generated video path."""
         result = self.run_backend(settings_file)
         video_path = result.get("video_path")
         if not video_path:
@@ -75,16 +61,18 @@ class Predictor:
     def run_backend(self, settings_file: str) -> dict:
         # Verify settings file
         if not os.path.exists(settings_file):
-            raise FileNotFoundError(f"Settings file '{settings_file}' not found.")
+            raise FileNotFoundError(
+                f"Settings file '{settings_file}' not found."
+            )
 
         # Load JSON settings
-        with open(settings_file, 'r') as f:
+        with open(settings_file, "r") as f:
             params = json.load(f)
 
         # Attach settings_file path
         params["settings_file"] = settings_file
         # Ensure generator optimization flag
-        self.pipe.generator.optimize = params.get('optimize', True)
+        self.pipe.generator.optimize = params.get("optimize", True)
 
         # Parse prompts into dict if needed
         prom = params.get("prompts", {})
@@ -96,9 +84,14 @@ class Predictor:
             params["animation_prompts"] = prom
 
         # Handle timestring/resume
-        ts = time.strftime('%Y%m%d%H%M%S')
-        params["timestring"] = params.get("resume_from_timestring") and params.get("resume_timestring") or ts
+        ts = time.strftime("%Y%m%d%H%M%S")
+        params["timestring"] = (
+            params.get("resume_from_timestring")
+            and params.get("resume_timestring")
+            or ts
+        )
 
+        print(f"[Run] Starting pipeline with timestring={params['timestring']}")
         # Run the pipeline
         animation = self.pipe(callback=None, **params)
 
@@ -107,7 +100,8 @@ class Predictor:
             "status": "Ready",
             "timestring": animation.timestring,
             "resume_path": animation.outdir,
-            "resume_from": getattr(animation, 'max_frames', None),
-            "video_path": getattr(animation, 'video_path', None)
+            "resume_from": getattr(animation, "max_frames", None),
+            "video_path": getattr(animation, "video_path", None),
         }
+        print(f"[Run] Pipeline finished, video_path={result['video_path']}")
         return result
