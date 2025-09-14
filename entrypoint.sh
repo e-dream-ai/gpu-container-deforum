@@ -18,6 +18,7 @@ export HF_HOME=/deforum_storage/huggingface
 export TRANSFORMERS_CACHE=/deforum_storage/huggingface/transformers
 export HF_DATASETS_CACHE=/deforum_storage/huggingface/datasets
 export HF_HUB_CACHE=/deforum_storage/huggingface/hub
+export HUGGINGFACE_HUB_CACHE=/deforum_storage/huggingface/hub
 
 # 5) Change to the deforum working directory and launch Runpod's serverless
 cd /workdir/deforum

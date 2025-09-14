@@ -21,10 +21,14 @@ class Predictor:
         
         os.makedirs(cache_dir, exist_ok=True)
         os.makedirs(os.path.join(cache_dir, "transformers"), exist_ok=True)
+        os.makedirs(os.path.join(cache_dir, "datasets"), exist_ok=True)
         os.makedirs(os.path.join(cache_dir, "hub"), exist_ok=True)
         
-        # Set the HF_HOME environment variable to ensure it's available for the pipeline
         os.environ["HF_HOME"] = cache_dir
+        os.environ["TRANSFORMERS_CACHE"] = os.path.join(cache_dir, "transformers")
+        os.environ["HF_DATASETS_CACHE"] = os.path.join(cache_dir, "datasets")
+        os.environ["HF_HUB_CACHE"] = os.path.join(cache_dir, "hub")
+        os.environ["HUGGINGFACE_HUB_CACHE"] = os.path.join(cache_dir, "hub")
         
         # Load or reuse the Deforum pipeline
         model_id = os.getenv("DEFORUM_MODEL_ID", "125703")
@@ -32,6 +36,11 @@ class Predictor:
             try:
                 print(f"Loading Deforum model {model_id} from CivitAI...")
                 print(f"Using cache directory: {cache_dir}")
+                print(f"Environment variables:")
+                print(f"  HF_HOME: {os.environ.get('HF_HOME')}")
+                print(f"  TRANSFORMERS_CACHE: {os.environ.get('TRANSFORMERS_CACHE')}")
+                print(f"  HF_HUB_CACHE: {os.environ.get('HF_HUB_CACHE')}")
+                print(f"  HUGGINGFACE_HUB_CACHE: {os.environ.get('HUGGINGFACE_HUB_CACHE')}")
                 models['deforum_pipe'] = DeforumAnimationPipeline.from_civitai(model_id=model_id)
                 print(f"Successfully loaded Deforum model {model_id}")
             except TypeError as e:
