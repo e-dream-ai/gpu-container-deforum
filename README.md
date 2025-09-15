@@ -9,6 +9,7 @@ This repository provides a Docker-based setup for **SD XL Deforum** featuring GP
 - **Docker Image**: Based on `nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04` for seamless GPU support.
 - **OpenCV Headless Enforcement**: Ensures only the headless OpenCV wheel is used to avoid GUI dependencies.
 - **RunPod Handler**: Serverless function for hosting on RunPod's serverless framework, with optional Cloudflare R2 upload support.
+- **RunPod Network Storage**: Uses RunPod's network storage to serve models efficiently across serverless instances.
 
 ## Prerequisites
 
@@ -27,7 +28,39 @@ This repository provides a Docker-based setup for **SD XL Deforum** featuring GP
 └── README.md                         # This document
 ```
 
-## Building the Docker Image
+## CI/CD Build Process
+
+### Automated Builds via GitHub Actions
+
+This repository uses GitHub Actions to automatically build and push Docker images to Docker Hub:
+
+1. **Trigger**: Automatic builds occur on every commit to the `main` branch
+2. **Build Process**:
+   - Uses the `Dockerfile-build` to create the image
+   - Tags the image as `edreamai/deforum-studio:<timestamp>-<branch>`
+   - Also creates a `latest` tag for the most recent build
+   - Pushes both tags to Docker Hub registry
+
+### Deployment Flow
+
+The deployment process follows this workflow:
+
+1. **Code Commit**: Push changes to the `main` branch
+2. **Automated Build**: GitHub Actions automatically builds and pushes the Docker image to `docker.io/edreamai/deforum-studio`
+3. **Image Tag**: Note the generated image tag from the GitHub Actions output (format: `<timestamp>-<branch>`)
+4. **Serverless Deployment**: Update your serverless pod configuration to use the new image tag
+5. **Release**: Deploy the updated configuration to your desired serverless environment
+
+### Finding the Latest Image Tag
+
+To find the correct image tag for deployment:
+
+1. **GitHub Actions**: Check the latest successful workflow run in the "Actions" tab
+2. **Docker Hub**: Visit Docker Hub to see all available tags
+
+### Local Building (Development)
+
+For local development and testing:
 
 1. **Build with GPU support**:
 
@@ -51,13 +84,15 @@ Run a container manually:
 ```bash
 docker run --gpus all -v $(pwd):/input \
   -e ROOT_PATH=/deforum_storage \
-  deforum-studio/animation-toolkit:<tag> \
+  edreamai/deforum-studio:<tag> \
   deforum runsingle --file /input/your-settings.json
 ```
 
 Output will be available in `/deforum_storage/output/video` and copied to `./output` by the build script.
 
 ## Deploying on RunPod
+
+This deployment uses **RunPod Network Storage** to serve models efficiently across serverless instances, eliminating the need to download models on each cold start.
 
 1. **Install dependencies**:
 
@@ -76,18 +111,23 @@ Output will be available in `/deforum_storage/output/video` and copied to `./out
    ```
 
    - (Optional) Configure Cloudflare R2 bucket credentials in `handler.py`.
+   - **Network Storage**: The deployment leverages RunPod's network storage to cache models and dependencies, significantly reducing startup times for serverless functions.
 
 4. **Deploy**:
+
+   Use the image tag from the GitHub Actions build output:
 
    ```bash
    runpod serverless deploy \
      --name sd-xl-deforum \
      --handler runpod_handler.handler \
-     --image deforum-studio/animation-toolkit:<tag> \
+     --image edreamai/deforum-studio:<timestamp>-<branch> \
      --memory 16384 \
      --gpu-count 1 \
      --region <your-region>
    ```
+
+   Replace `<timestamp>-<branch>` with the actual tag from the GitHub Actions build (e.g., `20250215123456-main`).
 
 5. **Invoke**:
 

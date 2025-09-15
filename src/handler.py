@@ -67,20 +67,39 @@ def handler(event):
         config=boto3.session.Config(s3={"addressing_style": "path"})
     )
 
-    # 6) upload file
-    s3_key = f"{uuid.uuid4()}.mp4"
+    # 6) upload file to the test-renders directory
+    s3_key = f"test-renders/{uuid.uuid4()}.mp4"
     s3.upload_file(video_local, bucket_name, s3_key)
 
     # 7) cleanup local
     os.remove(video_local)
 
-    # 8) construct public URL for Cloudflare R2
-    # Option 1: Use R2 public URL if bucket has public access
-    # video_url = f"https://{bucket_name}.{os.environ.get('R2_PUBLIC_DOMAIN', 'r2.dev')}/{s3_key}"
+    # 8) generate pre-signed download URL for secure access
+    # Pre-signed URL allows temporary authenticated access to private R2 bucket
+    # URL expires after specified time (24 hours by default)
+    expiration_seconds = int(os.environ.get("R2_PRESIGNED_EXPIRY", "86400"))  # 24 hours default
     
-    # Option 2: Use R2 API endpoint (requires authentication for access)
-    video_url = f"{endpoint_url}/{bucket_name}/{s3_key}"
-
-    return {"video": video_url}
+    try:
+        presigned_url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket_name, 'Key': s3_key},
+            ExpiresIn=expiration_seconds
+        )
+        
+        return {
+            "video": presigned_url,
+            "s3_key": s3_key,
+            "bucket": bucket_name,
+            "expires_in": expiration_seconds
+        }
+    except Exception as e:
+        print(f"[ERROR] Failed to generate pre-signed URL: {e}")
+        video_url = f"{endpoint_url}/{bucket_name}/{s3_key}"
+        return {
+            "video": video_url,
+            "s3_key": s3_key,
+            "bucket": bucket_name,
+            "requires_auth": True
+        }
 
 runpod.serverless.start({"handler": handler})
