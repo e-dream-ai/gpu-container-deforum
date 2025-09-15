@@ -69,20 +69,6 @@ class Predictor:
             print(f"[Init] Re-using existing loaded pipeline.")
 
         self.pipe = models["deforum_pipe"]
-        
-        try:
-            if hasattr(self.pipe, 'generator') and hasattr(self.pipe.generator, 'reset'):
-                print(f"[Init] Resetting generator state...")
-                self.pipe.generator.reset()
-            elif hasattr(self.pipe, 'generator'):
-                print(f"[Init] Re-initializing generator components...")
-                if hasattr(self.pipe.generator, '__init__'):
-                    # Store current generator type and reinitialize
-                    generator_class = type(self.pipe.generator)
-                    generator_args = getattr(self.pipe.generator, '_init_args', {})
-                    self.pipe.generator = generator_class(**generator_args)
-        except Exception as e:
-            print(f"[Init][WARNING] Could not reset generator state: {e}")
 
     def predict(self, settings_file: str) -> str:
         """Run Deforum with the given settings file and return the generated video path."""
@@ -105,29 +91,8 @@ class Predictor:
 
         # Attach settings_file path
         params["settings_file"] = settings_file
-        
-        # Validate generator state before use
-        try:
-            if hasattr(self.pipe.generator, 'clip'):
-                print(f"[Run] Generator clip attribute exists: {type(self.pipe.generator.clip)}")
-            else:
-                print(f"[Run][WARNING] Generator missing clip attribute, attempting recovery...")
-                # Try to reinitialize the generator
-                self._reinitialize_generator()
-        except Exception as e:
-            print(f"[Run][ERROR] Generator validation failed: {e}")
-            # Force pipeline recreation as last resort
-            print(f"[Run] Forcing pipeline recreation...")
-            if "deforum_pipe" in models:
-                del models["deforum_pipe"]
-            self.setup()  # Recreate pipeline
-        
         # Ensure generator optimization flag
-        try:
-            self.pipe.generator.optimize = params.get("optimize", True)
-        except AttributeError as e:
-            print(f"[Run][ERROR] Cannot set generator optimize flag: {e}")
-            raise RuntimeError(f"Generator is in invalid state: {e}")
+        self.pipe.generator.optimize = params.get("optimize", True)
 
         # Parse prompts into dict if needed
         prom = params.get("prompts", {})
@@ -160,19 +125,3 @@ class Predictor:
         }
         print(f"[Run] Pipeline finished, video_path={result['video_path']}")
         return result
-    
-    def _reinitialize_generator(self):
-        """Attempt to reinitialize the generator component."""
-        try:
-            if hasattr(self.pipe, '_create_generator'):
-                print(f"[Recovery] Using pipeline's _create_generator method...")
-                self.pipe.generator = self.pipe._create_generator()
-            elif hasattr(self.pipe, 'generator_class'):
-                print(f"[Recovery] Recreating generator from generator_class...")
-                self.pipe.generator = self.pipe.generator_class()
-            else:
-                print(f"[Recovery] No standard recovery method found")
-                raise AttributeError("Cannot reinitialize generator")
-        except Exception as e:
-            print(f"[Recovery][ERROR] Generator reinitialization failed: {e}")
-            raise
