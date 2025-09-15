@@ -67,8 +67,9 @@ def handler(event):
         config=boto3.session.Config(s3={"addressing_style": "path"})
     )
 
-    # 6) upload file to the test-renders directory
-    s3_key = f"test-renders/{uuid.uuid4()}.mp4"
+    # 6) upload file to the specified directory (with fallback)
+    upload_directory = os.environ.get("R2_UPLOAD_DIRECTORY", "test-renders")
+    s3_key = f"{upload_directory}/{uuid.uuid4()}.mp4"
     s3.upload_file(video_local, bucket_name, s3_key)
 
     # 7) cleanup local
