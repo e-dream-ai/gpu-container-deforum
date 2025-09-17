@@ -11,6 +11,9 @@ from predict import Predictor
 
 import boto3
 
+# Enforce a clean state after each job is done
+REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
+
 # Initialize the Deforum predictor
 generate_video = Predictor()
 generate_video.setup()
@@ -91,7 +94,8 @@ def handler(event):
             "video": presigned_url,
             "s3_key": s3_key,
             "bucket": bucket_name,
-            "expires_in": expiration_seconds
+            "expires_in": expiration_seconds,
+            "refresh_worker": REFRESH_WORKER
         }
     except Exception as e:
         print(f"[ERROR] Failed to generate pre-signed URL: {e}")
@@ -100,7 +104,8 @@ def handler(event):
             "video": video_url,
             "s3_key": s3_key,
             "bucket": bucket_name,
-            "requires_auth": True
+            "requires_auth": True,
+            "refresh_worker": REFRESH_WORKER
         }
 
 runpod.serverless.start({"handler": handler})
