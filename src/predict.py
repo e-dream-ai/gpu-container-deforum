@@ -92,7 +92,7 @@ class Predictor:
         # Attach settings_file path
         params["settings_file"] = settings_file
         # Ensure generator optimization flag
-        self.pipe.generator.optimize = params.get("optimize", False)
+        self.pipe.generator.optimize = params.get("optimize", True)
 
         # Parse prompts into dict if needed
         prom = params.get("prompts", {})
