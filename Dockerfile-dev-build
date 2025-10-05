@@ -27,6 +27,8 @@ RUN git checkout daa92a8ff4d3e75a3b17bb1a6b6c508b27264ff5
 
 WORKDIR /workdir/deforum
 
+RUN git clone https://github.com/shiimizu/ComfyUI_smZNodes /workdir/deforum/src/ComfyUI/custom_nodes/ComfyUI_smZNodes || true
+
 COPY test_input.json ./test_input.json
 
 # ——————————————————————————————————————————
