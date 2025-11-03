@@ -1,4 +1,4 @@
-# Install OpenCV
+# Install OpenCV and dependencies for Deforum Studio
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 RUN apt-get update && \
