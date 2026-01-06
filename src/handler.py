@@ -38,10 +38,6 @@ def handler(event):
         return {"errors": validated["errors"]}
     settings = validated["validated_input"]["settings"]
 
-    # Define progress callback
-    def progress_callback(percent):
-        runpod.serverless.progress_update(event, percent)
-
     # 2) download any remote files
     for key in ("video_init_path", "video_mask_path"):
         if key in settings:
@@ -56,7 +52,7 @@ def handler(event):
         sf_path = sf.name
 
     # 4) run prediction
-    video_local = generate_video.predict(settings_file=sf_path, progress_callback=progress_callback)
+    video_local = generate_video.predict(settings_file=sf_path)
     os.remove(sf_path)
 
     # 5) configure boto3 client for Cloudflare R2
