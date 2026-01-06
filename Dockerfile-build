@@ -9,7 +9,7 @@ RUN apt-get update && \
 
 # Now we can use git to clone the repository
 RUN rm -rf /workdir/deforum
-RUN git clone https://www.github.com/XmYx/deforum-studio deforum
+RUN git clone https://www.github.com/e-dream-ai/deforum-studio deforum
 
 WORKDIR /workdir/deforum
 
