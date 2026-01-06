@@ -70,15 +70,15 @@ class Predictor:
 
         self.pipe = models["deforum_pipe"]
 
-    def predict(self, settings_file: str) -> str:
+    def predict(self, settings_file: str, progress_callback: callable = None) -> str:
         """Run Deforum with the given settings file and return the generated video path."""
-        result = self.run_backend(settings_file)
+        result = self.run_backend(settings_file, progress_callback)
         video_path = result.get("video_path")
         if not video_path:
             raise RuntimeError(f"Deforum failed, no video_path in result: {result}")
         return video_path
 
-    def run_backend(self, settings_file: str) -> dict:
+    def run_backend(self, settings_file: str, progress_callback: callable = None) -> dict:
         # Verify settings file
         if not os.path.exists(settings_file):
             raise FileNotFoundError(
@@ -112,8 +112,17 @@ class Predictor:
         )
 
         print(f"[Run] Starting pipeline with timestring={params['timestring']}")
+        
+        def deforum_callback(data):
+            if progress_callback:
+                frame_idx = data.get("frame_idx")
+                max_frames = params.get("max_frames", 100)
+                if frame_idx is not None:
+                    percent = int((frame_idx / max_frames) * 100)
+                    progress_callback(percent)
+
         # Run the pipeline
-        animation = self.pipe(callback=None, **params)
+        animation = self.pipe(callback=deforum_callback, **params)
 
         # Collect result
         result = {
