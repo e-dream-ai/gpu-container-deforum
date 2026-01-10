@@ -38,8 +38,11 @@ def handler(event):
         return {"errors": validated["errors"]}
     settings = validated["validated_input"]["settings"]
 
-    def progress_callback(percent):
-        runpod.serverless.progress_update(event, percent)
+    def progress_callback(percent, preview=None):
+        if preview:
+            runpod.serverless.progress_update(event, {"progress": percent, "preview_frame": preview})
+        else:
+            runpod.serverless.progress_update(event, percent)
 
     # 2) download any remote files
     for key in ("video_init_path", "video_mask_path"):

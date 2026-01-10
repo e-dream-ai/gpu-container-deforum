@@ -116,10 +116,36 @@ class Predictor:
         def deforum_callback(data):
             if progress_callback:
                 frame_idx = data.get("frame_idx")
+                image = data.get("image") or data.get("img")
                 max_frames = params.get("max_frames", 100)
                 if frame_idx is not None:
                     percent = int((frame_idx / max_frames) * 100)
-                    progress_callback(percent)
+                    preview_base64 = None
+                    if image is not None:
+                        try:
+                            import cv2
+                            import base64
+                            import numpy as np
+                            if hasattr(image, 'save'): # PIL
+                                preview_img = image.copy()
+                                preview_img.thumbnail((256, 256))
+                                from io import BytesIO
+                                buffered = BytesIO()
+                                preview_img.save(buffered, format="JPEG", quality=70)
+                                preview_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+                            elif isinstance(image, np.ndarray):
+                                preview_img = cv2.resize(image, (256, 144))
+                                if len(preview_img.shape) == 3 and preview_img.shape[2] == 3:
+                                    preview_img = cv2.cvtColor(preview_img, cv2.COLOR_RGB2BGR)
+                                _, buffer = cv2.imencode('.jpg', preview_img, [cv2.IMWRITE_JPEG_QUALITY, 70])
+                                preview_base64 = base64.b64encode(buffer).decode('utf-8')
+                        except Exception as e:
+                            print(f"[Run][Warning] Preview generation failed: {e}")
+                    
+                    if preview_base64:
+                        progress_callback(percent, preview_base64)
+                    else:
+                        progress_callback(percent)
 
         # Run the pipeline
         animation = self.pipe(callback=deforum_callback, **params)
