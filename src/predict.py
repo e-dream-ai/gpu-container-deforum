@@ -119,7 +119,7 @@ class Predictor:
                 image = data.get("image") or data.get("img")
                 max_frames = params.get("max_frames", 100)
                 if frame_idx is not None:
-                    percent = int((frame_idx / max_frames) * 100)
+                    percent = round((frame_idx / max_frames) * 100, 1)
                     preview_base64 = None
                     if image is not None:
                         try:

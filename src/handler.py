@@ -1,4 +1,5 @@
 import os
+import time
 import json
 import uuid
 import tempfile
@@ -38,11 +39,22 @@ def handler(event):
         return {"errors": validated["errors"]}
     settings = validated["validated_input"]["settings"]
 
+    start_time = time.perf_counter()
+
     def progress_callback(percent, preview=None):
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+        countdown_ms = int((elapsed_ms / percent) * (100 - percent)) if percent > 0 else 0
+        
+        progress_data = {
+            "progress": round(float(percent), 1),
+            "render_time_ms": elapsed_ms,
+            "countdown_ms": countdown_ms
+        }
+        
         if preview:
-            runpod.serverless.progress_update(event, {"progress": percent, "preview_frame": preview})
-        else:
-            runpod.serverless.progress_update(event, percent)
+            progress_data["preview_frame"] = preview
+            
+        runpod.serverless.progress_update(event, progress_data)
 
     # 2) download any remote files
     for key in ("video_init_path", "video_mask_path"):
