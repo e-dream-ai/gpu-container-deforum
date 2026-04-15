@@ -29,6 +29,11 @@ RUN git checkout daa92a8ff4d3e75a3b17bb1a6b6c508b27264ff5
 
 WORKDIR /workdir/deforum
 
+# Install required ComfyUI custom nodes
+RUN git clone https://github.com/shiimizu/ComfyUI_smZNodes.git \
+      /workdir/deforum/src/ComfyUI/custom_nodes/ComfyUI_smZNodes && \
+    pip install -r /workdir/deforum/src/ComfyUI/custom_nodes/ComfyUI_smZNodes/requirements.txt || true
+
 # ——————————————————————————————————————————
 # Conditionally install Protovision model (if you include ./models locally)
 # ——————————————————————————————————————————
