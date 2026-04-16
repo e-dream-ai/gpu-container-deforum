@@ -22,10 +22,8 @@ RUN pip install runpod boto3 requests
 RUN pip uninstall -y opencv-python opencv-python-headless
 RUN pip install opencv-python-headless --force-reinstall
 
-# Clone ComfyUI at pinned commit
+# Clone ComfyUI (latest)
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /workdir/deforum/src/ComfyUI
-WORKDIR /workdir/deforum/src/ComfyUI
-RUN git checkout daa92a8ff4d3e75a3b17bb1a6b6c508b27264ff5
 
 WORKDIR /workdir/deforum
 
