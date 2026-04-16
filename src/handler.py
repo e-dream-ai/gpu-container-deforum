@@ -5,12 +5,39 @@ import uuid
 import tempfile
 import requests
 
+import sys
+
 import runpod
 from runpod.serverless.utils.rp_validator import validate
 from rp_schema import INPUT_SCHEMA
 from predict import Predictor
 
 import boto3
+
+# ── Initialize ComfyUI custom nodes before the pipeline loads ──────────────
+_COMFY_PATH = "/workdir/deforum/src/ComfyUI"
+if _COMFY_PATH not in sys.path:
+    sys.path.insert(0, _COMFY_PATH)
+
+try:
+    import nodes as _comfy_nodes
+    _custom_nodes_dir = os.path.join(_COMFY_PATH, "custom_nodes")
+    print(f"[Init] custom_nodes contents: {os.listdir(_custom_nodes_dir) if os.path.exists(_custom_nodes_dir) else 'NOT FOUND'}")
+
+    if hasattr(_comfy_nodes, "init_extra_nodes"):
+        _comfy_nodes.init_extra_nodes()
+        print("[Init] ComfyUI nodes loaded via init_extra_nodes()")
+    elif hasattr(_comfy_nodes, "init_custom_nodes"):
+        _comfy_nodes.init_custom_nodes()
+        print("[Init] ComfyUI nodes loaded via init_custom_nodes()")
+    else:
+        print("[Init] WARNING: no ComfyUI node-init function found")
+
+    _smz_keys = [k for k in _comfy_nodes.NODE_CLASS_MAPPINGS if "smZ" in k]
+    print(f"[Init] smZ mappings registered: {_smz_keys}")
+except Exception as _e:
+    print(f"[Init] WARNING: ComfyUI node init failed: {_e}")
+# ───────────────────────────────────────────────────────────────────────────
 
 # Enforce a clean state after each job is done
 REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
