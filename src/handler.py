@@ -35,6 +35,20 @@ try:
 
     _smz_keys = [k for k in _comfy_nodes.NODE_CLASS_MAPPINGS if "smZ" in k]
     print(f"[Init] smZ mappings registered: {_smz_keys}")
+
+    if not _smz_keys:
+        print("[Init] smZ not loaded — attempting direct import to surface error:")
+        try:
+            import importlib.util as _ilu
+            _smz_init = os.path.join(_custom_nodes_dir, "ComfyUI_smZNodes", "__init__.py")
+            _spec = _ilu.spec_from_file_location("ComfyUI_smZNodes", _smz_init)
+            _mod = _ilu.module_from_spec(_spec)
+            _spec.loader.exec_module(_mod)
+            print(f"[Init] Direct import succeeded, NODE_CLASS_MAPPINGS keys: {list(getattr(_mod, 'NODE_CLASS_MAPPINGS', {}).keys())}")
+        except Exception as _smz_e:
+            import traceback as _tb
+            print(f"[Init] smZ direct import error: {_smz_e}")
+            _tb.print_exc()
 except Exception as _e:
     print(f"[Init] WARNING: ComfyUI node init failed: {_e}")
 # ───────────────────────────────────────────────────────────────────────────
