@@ -22,18 +22,15 @@ RUN pip install runpod boto3 requests
 RUN pip uninstall -y opencv-python opencv-python-headless
 RUN pip install opencv-python-headless --force-reinstall
 
-# Clone ComfyUI (latest)
-RUN git clone https://github.com/comfyanonymous/ComfyUI.git /workdir/deforum/src/ComfyUI
+# Clone ComfyUI
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git /workdir/deforum/src/ComfyUI && \
+    git -C /workdir/deforum/src/ComfyUI checkout daa92a8ff4d3e75a3b17bb1a6b6c508b27264ff5
 
 WORKDIR /workdir/deforum
 
 ENV COMFYUI_PATH=/workdir/deforum/src/ComfyUI
 ENV COMFYUI_MODEL_PATH=/workdir/deforum/src/ComfyUI/models
 
-# Install required ComfyUI custom nodes
-RUN git clone https://github.com/shiimizu/ComfyUI_smZNodes.git \
-      /workdir/deforum/src/ComfyUI/custom_nodes/ComfyUI_smZNodes && \
-    pip install -r /workdir/deforum/src/ComfyUI/custom_nodes/ComfyUI_smZNodes/requirements.txt || true
 
 # ——————————————————————————————————————————
 # Conditionally install Protovision model (if you include ./models locally)
