@@ -31,11 +31,6 @@ WORKDIR /workdir/deforum
 ENV COMFYUI_PATH=/workdir/deforum/src/ComfyUI
 ENV COMFYUI_MODEL_PATH=/workdir/deforum/src/ComfyUI/models
 
-# Install smZ ComfyUI custom node (required for apply_smz_optimizations)
-RUN git clone https://github.com/shiimizu/ComfyUI_smZNodes \
-    /workdir/deforum/src/ComfyUI/custom_nodes/ComfyUI_smZNodes
-
-
 # ——————————————————————————————————————————
 # Conditionally install Protovision model (if you include ./models locally)
 # ——————————————————————————————————————————
