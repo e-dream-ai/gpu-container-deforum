@@ -28,6 +28,7 @@ RUN git checkout daa92a8ff4d3e75a3b17bb1a6b6c508b27264ff5
 WORKDIR /workdir/deforum
 
 COPY test_input.json ./test_input.json
+ENV LORA_PATH=/deforum_storage/models/loras
 
 # ——————————————————————————————————————————
 # Conditionally install the Protovision model
@@ -45,6 +46,13 @@ RUN if [ -f /tmp/models/protovisionXLHighFidelity3D_releaseV660Bakedvae.safetens
 
 # (Optional) clean up the temp copy
 RUN rm -rf /tmp/models
+
+COPY ./loras/manifest.json /tmp/loras/manifest.json
+COPY ./scripts/download_loras.py /tmp/loras/download_loras.py
+RUN python3 /tmp/loras/download_loras.py \
+      --manifest /tmp/loras/manifest.json \
+      --output /deforum_storage/models/loras && \
+    rm -rf /tmp/loras
 
 # Copy and install the entrypoint
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh

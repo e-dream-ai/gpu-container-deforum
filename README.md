@@ -141,6 +141,20 @@ The response will include a `video` URL to your generated MP4.
 
 ## Advanced Configuration
 
+### Bundled LoRAs
+
+Bundled LoRAs are declared in `loras/manifest.json`. Each entry supplies the prompt alias, download URL, and SHA-256 checksum. The image build installs each file as `/deforum_storage/models/loras/<alias>.safetensors`.
+
+Use an installed LoRA from every Deforum keyframe that needs it:
+
+```text
+ral-frctlgmtry, <lora:ral-frctlgmtry:1> a fractal landscape
+```
+
+Multiple LoRAs can be chained in one prompt. All keyframes in one animation must use the same aliases and strengths.
+
+To bundle another LoRA, add one entry to `loras/manifest.json` and rebuild the image. No inference code changes are required.
+
 - **Settings File**: Pass `settings_file` in payload to override JSON parameters.
 - **Cloudflare R2 Upload**: Configure the following environment variables for R2 access:
 

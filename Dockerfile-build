@@ -30,6 +30,7 @@ WORKDIR /workdir/deforum
 
 ENV COMFYUI_PATH=/workdir/deforum/src/ComfyUI
 ENV COMFYUI_MODEL_PATH=/workdir/deforum/src/ComfyUI/models
+ENV LORA_PATH=/deforum_storage/models/loras
 
 # ——————————————————————————————————————————
 # Conditionally install Protovision model (if you include ./models locally)
@@ -41,6 +42,13 @@ RUN if [ -f /tmp/models/protovisionXLHighFidelity3D_releaseV660Bakedvae.safetens
          /deforum_storage/models/protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors; \
     fi
 RUN rm -rf /tmp/models
+
+COPY ./loras/manifest.json /tmp/loras/manifest.json
+COPY ./scripts/download_loras.py /tmp/loras/download_loras.py
+RUN python3 /tmp/loras/download_loras.py \
+      --manifest /tmp/loras/manifest.json \
+      --output /deforum_storage/models/loras && \
+    rm -rf /tmp/loras
 
 # ——————————————————————————————————————————
 # Copy Serverless handler + predictor code
