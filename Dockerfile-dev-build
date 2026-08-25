@@ -2,32 +2,30 @@ FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 WORKDIR /workdir
 
-RUN rm -rf /workdir/deforum
-
 COPY sources/deforum-studio ./deforum
 COPY src/*.py /workdir/deforum/src/
 COPY test_input.json /workdir/deforum/
 
 RUN apt-get update && \
-    apt-get install -y git python3-pip && \
+    apt-get install -y --no-install-recommends git python3-pip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workdir/deforum
 
-RUN pip install -e .[dev]
-RUN pip install runpod boto3
+RUN pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir runpod boto3 requests && \
+    pip uninstall -y opencv-python opencv-python-headless && \
+    pip install --no-cache-dir --force-reinstall opencv-python-headless && \
+    rm -rf /root/.cache/pip
 
-# Uninstall and reinstall OpenCV packages as needed
-RUN pip uninstall -y opencv-python opencv-python-headless
-RUN pip install opencv-python-headless --force-reinstall
-
-RUN git clone https://github.com/comfyanonymous/ComfyUI.git /workdir/deforum/src/ComfyUI
-WORKDIR /workdir/deforum/src/ComfyUI
-RUN git checkout daa92a8ff4d3e75a3b17bb1a6b6c508b27264ff5
+RUN git clone --filter=blob:none --no-checkout \
+      https://github.com/comfyanonymous/ComfyUI.git /workdir/deforum/src/ComfyUI && \
+    git -C /workdir/deforum/src/ComfyUI checkout \
+      daa92a8ff4d3e75a3b17bb1a6b6c508b27264ff5 && \
+    rm -rf /workdir/deforum/src/ComfyUI/.git
 
 WORKDIR /workdir/deforum
 
-COPY test_input.json ./test_input.json
 ENV LORA_PATH=/deforum_storage/models/loras
 
 # ——————————————————————————————————————————
