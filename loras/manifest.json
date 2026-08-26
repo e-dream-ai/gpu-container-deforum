@@ -23,5 +23,35 @@
     "alias": "dieselpunk-propaganda-art",
     "url": "https://civitai.com/api/download/models/1998316?fileId=1897703",
     "sha256": "7653cf8ef0ad550077cd34ac3273c701839f6eff403d5067a928b8fc9a42ea79"
+  },
+  {
+    "alias": "kaleidoscope-style",
+    "url": "https://civitai.com/api/download/models/1019727?fileId=925344",
+    "sha256": "6273c73a031eeee9d0e1d8332d7edfa6794911fd97f72de72fe8a626cd8518b3"
+  },
+  {
+    "alias": "holographic-style",
+    "url": "https://civitai.com/api/download/models/595769?fileId=510927",
+    "sha256": "2739b14644afbbb565d6ac258eefc932c670f5fb21e3c39d22aecb6059b77545"
+  },
+  {
+    "alias": "chrome-style",
+    "url": "https://civitai.com/api/download/models/233612?fileId=180294",
+    "sha256": "afd615c10b75b5d3dfd8a3ed4156ce8e131d10fd9be4b6408710183901996e03"
+  },
+  {
+    "alias": "bismuth-style",
+    "url": "https://civitai.com/api/download/models/255200?fileId=197928",
+    "sha256": "b768a9b0fb34ce757689d1b196e7701cf47e072a1dfd6583f277f6251471e6e7"
+  },
+  {
+    "alias": "color-swirl-style",
+    "url": "https://civitai.com/api/download/models/284883?fileId=223426",
+    "sha256": "12c6b942f0d9a705836664f917c844c64bc2c77da8d264f4e3c5d30443a8ec95"
+  },
+  {
+    "alias": "trichom-style",
+    "url": "https://civitai.com/api/download/models/275323?fileId=215244",
+    "sha256": "eaf8e1e2968ae700a969734834b60e5549f294f93cfe2eed494b38836aeb2de7"
   }
 ]
