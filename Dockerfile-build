@@ -34,8 +34,6 @@ RUN python3 -m venv --system-site-packages "${VIRTUAL_ENV}" && \
       --constraint requirements/torch.txt \
       --requirement requirements/core.txt \
       --requirement requirements/serverless.txt && \
-    "${VIRTUAL_ENV}/bin/python" -m pip uninstall -y opencv-python opencv-python-headless && \
-    "${VIRTUAL_ENV}/bin/python" -m pip install --no-cache-dir --no-deps opencv-python-headless && \
     "${VIRTUAL_ENV}/bin/python" -m pip check && \
     "${VIRTUAL_ENV}/bin/python" -c \
       "import torch, torchvision; assert torch.__file__.startswith('/opt/conda/'); assert torchvision.__file__.startswith('/opt/conda/')"
