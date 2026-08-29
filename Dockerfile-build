@@ -33,6 +33,7 @@ WORKDIR /workdir/deforum
 ENV COMFYUI_PATH=/workdir/deforum/src/ComfyUI
 ENV COMFYUI_MODEL_PATH=/workdir/deforum/src/ComfyUI/models
 ENV LORA_PATH=/deforum_storage/models/loras
+ENV OTHER_MODEL_PATH=/runpod-volume/models/other
 
 # ——————————————————————————————————————————
 # Conditionally install Protovision model (if you include ./models locally)
