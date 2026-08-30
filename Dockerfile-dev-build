@@ -27,7 +27,6 @@ RUN git clone --filter=blob:none --no-checkout \
 WORKDIR /workdir/deforum
 
 ENV LORA_PATH=/deforum_storage/models/loras
-ENV OTHER_MODEL_PATH=/runpod-volume/models/other
 
 # ——————————————————————————————————————————
 # Conditionally install the Protovision model

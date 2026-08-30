@@ -73,29 +73,13 @@ jobs:
           echo "image_tag=${REGISTRY}/${IMAGE_LOWER}:${VERSION}" >> $GITHUB_OUTPUT
           echo "latest_tag=${REGISTRY}/${IMAGE_LOWER}:latest" >> $GITHUB_OUTPUT
 
-      - name: Resolve Deforum commit
-        id: deforum
-        env:
-          DEFORUM_BRANCH: ${{ steps.meta.outputs.deforum_branch }}
-        run: |
-          DEFORUM_COMMIT=$(git ls-remote --exit-code \
-            https://github.com/e-dream-ai/deforum-studio.git \
-            "refs/heads/${DEFORUM_BRANCH}" | awk 'NR == 1 {print $1}')
-
-          if [[ ! "$DEFORUM_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "Could not resolve Deforum branch: ${DEFORUM_BRANCH}" >&2
-            exit 1
-          fi
-
-          echo "commit=${DEFORUM_COMMIT}" >> "$GITHUB_OUTPUT"
-
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile-build
           build-args: |
-            DEFORUM_COMMIT=${{ steps.deforum.outputs.commit }}
+            DEFORUM_BRANCH=${{ steps.meta.outputs.deforum_branch }}
           push: true
           tags: |
             ${{ steps.meta.outputs.image_tag }}

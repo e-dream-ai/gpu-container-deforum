@@ -1,28 +1,27 @@
-# syntax=docker/dockerfile:1.7
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
-ARG PYTORCH_IMAGE=pytorch/pytorch:2.8.0-cuda12.8-cudnn9
-
-FROM ${PYTORCH_IMAGE}-devel AS dependency-builder
-
-ARG DEFORUM_COMMIT
-
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+ARG DEFORUM_BRANCH=main
 
 WORKDIR /workdir
 
+# Install system dependencies first
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git && \
+    apt-get install -y --no-install-recommends git python3-pip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN test -n "${DEFORUM_COMMIT}" && \
-    git init deforum && \
-    git -C deforum remote add origin \
-      https://www.github.com/e-dream-ai/deforum-studio && \
-    git -C deforum fetch --depth 1 origin "${DEFORUM_COMMIT}" && \
-    git -C deforum checkout --detach FETCH_HEAD && \
-    test "$(git -C deforum rev-parse HEAD)" = "${DEFORUM_COMMIT}"
+# Now we can use git to clone the repository
+RUN git clone --depth 1 --branch "${DEFORUM_BRANCH}" \
+    https://www.github.com/e-dream-ai/deforum-studio deforum
 
+WORKDIR /workdir/deforum
+
+RUN pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir runpod boto3 requests && \
+    pip uninstall -y opencv-python opencv-python-headless && \
+    pip install --no-cache-dir --force-reinstall opencv-python-headless && \
+    rm -rf /root/.cache/pip
+
+# Clone ComfyUI
 RUN git clone --filter=blob:none --no-checkout \
       https://github.com/comfyanonymous/ComfyUI.git /workdir/deforum/src/ComfyUI && \
     git -C /workdir/deforum/src/ComfyUI checkout \
@@ -31,44 +30,20 @@ RUN git clone --filter=blob:none --no-checkout \
 
 WORKDIR /workdir/deforum
 
-RUN python3 -m venv --system-site-packages "${VIRTUAL_ENV}" && \
-    "${VIRTUAL_ENV}/bin/python" -m pip install --no-cache-dir --no-deps -e . && \
-    "${VIRTUAL_ENV}/bin/python" scripts/validate_torch_requirements.py \
-      requirements/torch.txt && \
-    "${VIRTUAL_ENV}/bin/python" -m pip install --no-cache-dir \
-      --constraint requirements/torch.txt \
-      --requirement requirements/core.txt \
-      --requirement requirements/serverless.txt && \
-    "${VIRTUAL_ENV}/bin/python" -m pip check && \
-    "${VIRTUAL_ENV}/bin/python" -c \
-      "import torch, torchvision; assert torch.__file__.startswith('/opt/conda/'); assert torchvision.__file__.startswith('/opt/conda/')"
-
-FROM ${PYTORCH_IMAGE}-runtime AS runtime
-
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends git && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-COPY --from=dependency-builder /opt/venv /opt/venv
-COPY --from=dependency-builder /workdir/deforum /workdir/deforum
-
-WORKDIR /workdir/deforum
-
 ENV COMFYUI_PATH=/workdir/deforum/src/ComfyUI
 ENV COMFYUI_MODEL_PATH=/workdir/deforum/src/ComfyUI/models
 ENV LORA_PATH=/deforum_storage/models/loras
-ENV OTHER_MODEL_PATH=/runpod-volume/models/other
 
+# ——————————————————————————————————————————
+# Conditionally install Protovision model (if you include ./models locally)
+# ——————————————————————————————————————————
 COPY ./models /tmp/models
 RUN if [ -f /tmp/models/protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors ]; then \
       mkdir -p /deforum_storage/models && \
       cp /tmp/models/protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors \
          /deforum_storage/models/protovisionXLHighFidelity3D_releaseV660Bakedvae.safetensors; \
-    fi && \
-    rm -rf /tmp/models
+    fi
+RUN rm -rf /tmp/models
 
 COPY ./loras/manifest.json /tmp/loras/manifest.json
 COPY ./scripts/download_loras.py /tmp/loras/download_loras.py
@@ -77,10 +52,15 @@ RUN python3 /tmp/loras/download_loras.py \
       --output /deforum_storage/models/loras && \
     rm -rf /tmp/loras
 
+# ——————————————————————————————————————————
+# Copy Serverless handler + predictor code
+# ——————————————————————————————————————————
 COPY ./src/ /workdir/deforum/src/
 
+# Copy and install entrypoint
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+# Entrypoint + default CMD
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["deforum", "runsingle", "--file", "/input/$SETTINGS_FILE"]

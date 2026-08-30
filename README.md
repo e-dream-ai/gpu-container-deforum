@@ -141,10 +141,6 @@ The response will include a `video` URL to your generated MP4.
 
 ## Advanced Configuration
 
-### Persistent depth models
-
-3D animations use `OTHER_MODEL_PATH=/runpod-volume/models/other`. The first worker downloads and verifies a missing depth model there; later workers reuse the copy on the attached RunPod volume.
-
 ### Bundled LoRAs
 
 Bundled LoRAs are declared in `loras/manifest.json`. Each entry supplies the prompt alias, download URL, and SHA-256 checksum. The image build installs each file as `/deforum_storage/models/loras/<alias>.safetensors`.
